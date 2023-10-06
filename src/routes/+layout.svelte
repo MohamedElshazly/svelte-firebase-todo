@@ -1,25 +1,43 @@
 <script lang="ts">
+	import { auth } from '$lib';
+	import { Button } from 'flowbite-svelte';
 	import '../app.postcss';
-	import { initializeApp } from 'firebase/app';
-	import { getFirestore } from 'firebase/firestore';
-	import { getAuth } from 'firebase/auth';
-	import { getStorage } from 'firebase/storage';
+	import { beforeUpdate, onMount } from 'svelte';
+	import { session } from '$lib/stores/authStore';
 
-	// Initialize Firebase
-	const firebaseConfig = {
-		apiKey: 'AIzaSyAneBuXt32MZG1c9dZ-eG_x1wptZm18EE0',
-		authDomain: 'sveltefire-test-f9439.firebaseapp.com',
-		projectId: 'sveltefire-test-f9439',
-		storageBucket: 'sveltefire-test-f9439.appspot.com',
-		messagingSenderId: '577992584329',
-		appId: '1:577992584329:web:894e8772a713066e53aa58'
-	};
-	const app = initializeApp(firebaseConfig);
-	const firestore = getFirestore(app);
-	const auth = getAuth(app);
-	const storage = getStorage(app);
+	const unprotectedRoutes = ['/login', '/signup'];
+
+	beforeUpdate(() => {
+		const unsubscribe = auth.onAuthStateChanged(async (user) => {
+			const currentPath = window.location.pathname;
+
+			if (!user && !unprotectedRoutes.includes(currentPath)) {
+				window.location.href = '/login';
+				return;
+			}
+
+			if (user && unprotectedRoutes.includes(currentPath)) {
+				window.location.href = '/';
+				return;
+			}
+
+			if (!user) {
+				return;
+			}
+		});
+
+		return unsubscribe;
+	});
+
+	const user = auth.currentUser;
 </script>
 
 <main>
+	{#if user}
+		<div class="flex gap-2 items-center">
+			<h1 class="text-white">Logged in as {user.email}</h1>
+			<Button on:click={session.logout}>Logout</Button>
+		</div>
+	{/if}
 	<slot />
 </main>
